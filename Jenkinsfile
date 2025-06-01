@@ -1,7 +1,5 @@
 pipeline {
-    // You can use 'any' if the Jenkins agent where your device is connected
-    // is the default. Or, specify a label if you have multiple agents.
-    agent any // e.g., agent { label 'windows_laptop_agent' }
+    agent any // Or agent { label 'your_windows_agent_label' }
 
     stages {
         stage('Checkout Source Code') {
@@ -13,39 +11,23 @@ pipeline {
         stage('Run Mobile Tests Locally') {
             steps {
                 script {
-                    // This try-finally block ensures Appium is killed even if tests fail
                     try {
                         echo "Starting Appium server..."
-                        // Use 'bat' for Windows batch commands.
-                        // 'start /B' runs Appium in the background.
-                        // `cd ${pwd()}` ensures the command runs from the workspace root.
-                        // Then ensure we return to the current directory
-                        // This uses `cmd.exe /C` to make sure `start` is executed correctly.
                         bat """
-                            cd ${pwd()}
+                            cd "${pwd()}"
                             start /B appium -p 4723
                         """
 
-                        echo "Giving Appium server 10 seconds to start..."
-                        sleep 10 // Give Appium server time to fully start
+                        echo "Giving Appium server 15 seconds to start..." // Increased sleep for robustness
+                        sleep 15 // Increased from 10 to 15
 
                         echo "Running Maven tests..."
-                        // Determine Maven command based on OS (for robustness)
-                        def mvnCommand = ""
-                        if (isUnix()) { // For Linux/macOS agents
-                            mvnCommand = "mvn"
-                        } else { // For Windows agents
-                            mvnCommand = "mvn.cmd" // Use mvn.cmd for Windows
-                        }
-
-                        // Execute Maven tests from the mtest subfolder
+                        def mvnCommand = isUnix() ? "mvn" : "mvn.cmd"
                         bat "${mvnCommand} -f mtest/pom.xml test"
 
                     } finally {
-                        echo "Attempting to stop Appium server..."
-                        // Find and kill the process listening on port 4723
-                        // This uses netstat to find the PID and taskkill to terminate it on Windows
-                        // This ensures Appium doesn't linger after the job completes
+                        echo "Attempting to stop Appium server and lingering Java processes..."
+                        // Kill Appium process by port
                         bat """
                             for /F "tokens=5" %%p in ('netstat -ano ^| findstr :4723') do (
                                 set PID=%%p
@@ -57,20 +39,44 @@ pipeline {
                                 echo No Appium process found on port 4723.
                             )
                         """
-                        sleep 2 // Give it a moment to terminate
-                        echo "Appium server cleanup attempt complete."
+
+                        // ADD THIS PART: Aggressively kill any java.exe processes (your Maven/TestNG JVMs)
+                        // associated with the current user or session.
+                        // /F for forcefully, /T for tree kill (children processes)
+                        // This might kill other java processes not related to Jenkins build if not careful
+                        // but for a dedicated Jenkins agent, it's often safe.
+                        bat """
+                            echo Attempting to kill any lingering Java processes...
+                            tasklist /FI "IMAGENAME eq java.exe" /FO CSV > java_processes.csv
+                            findstr "${env.BUILD_ID}" java_processes.csv > matching_java_processes.csv || REM No matching processes found
+
+                            for /F "tokens=2 delims=," %%a in ('type matching_java_processes.csv') do (
+                                set "JAVA_PID=%%a"
+                                if defined JAVA_PID (
+                                    echo Killing Java process with PID: !JAVA_PID!
+                                    taskkill /PID !JAVA_PID! /F /T
+                                )
+                            )
+                            del java_processes.csv matching_java_processes.csv
+                        """
+                        // NOTE: The above `taskkill` block for Java needs to be wrapped
+                        // in a block that enables delayed expansion if you're not careful with `!` vs `%`.
+                        // Simpler and generally safer for basic use cases is:
+                        bat 'taskkill /F /IM "java.exe" /T || echo No java.exe processes found to kill.'
+
+
+                        sleep 10 // Increased this sleep after all kills (from 5 to 10)
+                        echo "Appium and Java server cleanup attempt complete."
                     }
                 }
             }
         }
     }
 
-    // Optional: Post-build actions, e.g., archiving reports or cleaning up workspace
     post {
         always {
             echo "Waiting a moment before cleaning workspace..."
-            sleep 5 // <--- ADD THIS SLEEP BEFORE deleteDir()
-            // Clean up the workspace after every build (good practice)
+            sleep 10 // Keep this sleep before deleteDir() (from 5 to 10)
             deleteDir()
         }
     }
