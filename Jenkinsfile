@@ -68,6 +68,8 @@ pipeline {
     // Optional: Post-build actions, e.g., archiving reports or cleaning up workspace
     post {
         always {
+            echo "Waiting a moment before cleaning workspace..."
+            sleep 5 // <--- ADD THIS SLEEP BEFORE deleteDir()
             // Clean up the workspace after every build (good practice)
             deleteDir()
         }
