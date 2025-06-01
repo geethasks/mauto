@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
+  <reporter-output>
+  </reporter-output>
+  <suite started-at="2025-05-31T19:04:43 PDT" name="CalculatorTestSuite" finished-at="2025-05-31T19:04:57 PDT" duration-ms="14064">
+    <groups>
+    </groups>
+    <test started-at="2025-05-31T19:04:43 PDT" name="CalculatorTests" finished-at="2025-05-31T19:04:57 PDT" duration-ms="14064">
+      <class name="tests.CalculatorTest">
+        <test-method is-config="true" signature="setup([Ljava.lang.Object;)[pri:0, instance:tests.CalculatorTest@78691363]" started-at="2025-05-31T19:04:43 PDT" name="setup" finished-at="2025-05-31T19:04:53 PDT" duration-ms="10102" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[[Ljava.lang.Object;@1e6308a9]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setup -->
+        <test-method signature="testAddition(java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String,java.lang.String)[pri:0, instance:tests.CalculatorTest@78691363]" started-at="2025-05-31T19:04:53 PDT" name="testAddition" data-provider="deviceData" finished-at="2025-05-31T19:04:56 PDT" duration-ms="3362" status="PASS">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[Android]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[Galaxy_S21+5G]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[RFCR70KJQ7W]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[com.sec.android.app.popupcalculator]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[com.sec.android.app.popupcalculator.Calculator]]>
+              </value>
+            </param>
+            <param index="6">
+              <value>
+                <![CDATA[real]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testAddition -->
+        <test-method is-config="true" signature="tearDown()[pri:0, instance:tests.CalculatorTest@78691363]" started-at="2025-05-31T19:04:56 PDT" name="tearDown" finished-at="2025-05-31T19:04:57 PDT" duration-ms="558" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+      </class> <!-- tests.CalculatorTest -->
+    </test> <!-- CalculatorTests -->
+  </suite> <!-- CalculatorTestSuite -->
+</testng-results>
