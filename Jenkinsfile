@@ -1,5 +1,5 @@
 pipeline {
-    agent any // Or agent { label 'your_windows_agent_label' }
+    agent any
 
     stages {
         stage('Checkout Source Code') {
@@ -12,61 +12,47 @@ pipeline {
             steps {
                 script {
                     try {
-                        echo "Starting Appium server..."
+                        echo "--- STARTING APPIUM ---"
                         bat """
                             cd "${pwd()}"
                             start /B appium -p 4723
                         """
+                        echo "Appium launch command issued. Giving 15 seconds to start..."
+                        sleep 15
 
-                        echo "Giving Appium server 15 seconds to start..." // Increased sleep for robustness
-                        sleep 15 // Increased from 10 to 15
-
-                        echo "Running Maven tests..."
+                        echo "--- RUNNING MAVEN TESTS ---"
                         def mvnCommand = isUnix() ? "mvn" : "mvn.cmd"
                         bat "${mvnCommand} -f mtest/pom.xml test"
+                        echo "Maven tests command completed."
 
                     } finally {
-                        echo "Attempting to stop Appium server and lingering Java processes..."
-                        // Kill Appium process by port
+                        echo "--- STARTING CLEANUP IN FINALLY BLOCK ---"
+
+                        echo "Attempting to kill Appium process by port 4723..."
                         bat """
                             for /F "tokens=5" %%p in ('netstat -ano ^| findstr :4723') do (
                                 set PID=%%p
                             )
                             if defined PID (
-                                echo Killing Appium process with PID: %PID%
+                                echo Found Appium PID: %PID%. Killing now...
                                 taskkill /PID %PID% /F
                             ) else (
                                 echo No Appium process found on port 4723.
                             )
                         """
+                        echo "Appium kill command issued. Waiting 5 seconds for OS to process..."
+                        sleep 5
 
-                        // ADD THIS PART: Aggressively kill any java.exe processes (your Maven/TestNG JVMs)
-                        // associated with the current user or session.
-                        // /F for forcefully, /T for tree kill (children processes)
-                        // This might kill other java processes not related to Jenkins build if not careful
-                        // but for a dedicated Jenkins agent, it's often safe.
-                        bat """
-                            echo Attempting to kill any lingering Java processes...
-                            tasklist /FI "IMAGENAME eq java.exe" /FO CSV > java_processes.csv
-                            findstr "${env.BUILD_ID}" java_processes.csv > matching_java_processes.csv || REM No matching processes found
+                        echo "Attempting to kill any lingering Java processes (Maven/TestNG JVMs)..."
+                        // This command attempts to kill all Java processes forcibly.
+                        // Add `cmd /C` to ensure the command is executed and completes within the bat context.
+                        bat 'cmd /C "taskkill /F /IM "java.exe" /T || echo No java.exe processes found to kill."'
+                        echo "Java kill command issued. Waiting 5 seconds for OS to process..."
+                        sleep 5
 
-                            for /F "tokens=2 delims=," %%a in ('type matching_java_processes.csv') do (
-                                set "JAVA_PID=%%a"
-                                if defined JAVA_PID (
-                                    echo Killing Java process with PID: !JAVA_PID!
-                                    taskkill /PID !JAVA_PID! /F /T
-                                )
-                            )
-                            del java_processes.csv matching_java_processes.csv
-                        """
-                        // NOTE: The above `taskkill` block for Java needs to be wrapped
-                        // in a block that enables delayed expansion if you're not careful with `!` vs `%`.
-                        // Simpler and generally safer for basic use cases is:
-                        bat 'taskkill /F /IM "java.exe" /T || echo No java.exe processes found to kill.'
-
-
-                        sleep 10 // Increased this sleep after all kills (from 5 to 10)
-                        echo "Appium and Java server cleanup attempt complete."
+                        echo "All process cleanup commands issued. Final short sleep before finally block exits."
+                        sleep 5 // Short sleep before exiting the 'finally' block
+                        echo "--- CLEANUP SEQUENCE COMPLETE ---"
                     }
                 }
             }
@@ -75,9 +61,11 @@ pipeline {
 
     post {
         always {
-            echo "Waiting a moment before cleaning workspace..."
-            sleep 10 // Keep this sleep before deleteDir() (from 5 to 10)
+            echo "--- ATTEMPTING WORKSPACE CLEANUP ---"
+            echo "Waiting 10 seconds before attempting deleteDir()..."
+            sleep 10 // Give a final chance for resources to release
             deleteDir()
+            echo "--- WORKSPACE CLEANUP COMPLETE ---"
         }
     }
 }
